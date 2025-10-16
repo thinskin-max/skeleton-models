@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Boulder Skeleton — Local Only</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #0b0c10; color: #e6e6e6 }
+  header { padding: 14px 18px; border-bottom: 1px solid #1f232b; display: flex; gap: 12px; align-items: center }
+  .badge { font-size: 12px; opacity: .9 }
+  main { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; padding: 16px }
+  section { background: #111318; border: 1px solid #1f232b; border-radius: 12px; overflow: hidden }
+  .pane-head { padding: 10px 14px; border-bottom: 1px solid #1f232b; font-weight: 600; display: flex; justify-content: space-between; align-items: center }
+  .pane-body { padding: 12px }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+  button, input[type=file], select { background: #1a1d24; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 10px; padding: 8px 12px; cursor: pointer }
+  button:hover { background: #222632 }
+  canvas, video { max-width: 100%; border-radius: 10px; border: 1px solid #1f232b; background: #000 }
+  .log { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; white-space: pre-wrap; background: #0e1015; border: 1px solid #1f232b; border-radius: 8px; padding: 8px; max-height: 240px; overflow: auto }
+  .ok { color: #8be48b } .warn { color: #ffd37a } .err { color: #ff8b8b }
+</style>
+</head>
+<body>
+<header>
+  <strong>🧗‍♂️ Boulder Skeleton — Local Only</strong>
+  <span class="badge" id="diag">初始化中…</span>
+</header>
+
+<main>
+  <section>
+    <div class="pane-head"><div>視訊 / 影片</div><div></div></div>
+    <div class="pane-body">
+      <div class="row" style="margin-bottom:8px">
+        <input id="file" type="file" accept="video/*" />
+        <button id="cameraBtn">使用攝像頭</button>
+        <button id="stopCameraBtn">關閉攝像頭</button>
+        <select id="modelSel">
+          <option value="lite">BlazePose Lite（快）</option>
+          <option value="full" selected>BlazePose Full（均衡）</option>
+          <option value="heavy">BlazePose Heavy（精確）</option>
+        </select>
+        <button id="startBtn">開始</button>
+        <button id="pauseBtn">暫停</button>
+      </div>
+      <div class="row">
+        <video id="video" playsinline muted></video>
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="pane-head"><div>狀態 / 日誌</div><button id="selftestBtn">自檢</button></div>
+    <div class="pane-body"><div class="log" id="log">等待輸出…</div></div>
+  </section>
+</main>
+
+<!-- BlazePose Mediapipe -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.0/dist/pose-detection.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
+
+<script>
+(() => {
+  const $ = id=>document.getElementById(id);
+  const vid=$('video'), can=$('canvas'), ctx=can.getContext('2d');
+  const file=$('file'), startBtn=$('startBtn'), pauseBtn=$('pauseBtn'),
+        cameraBtn=$('cameraBtn'), stopCameraBtn=$('stopCameraBtn'), modelSel=$('modelSel');
+  const log=$('log'), diag=$('diag'), selftestBtn=$('selftestBtn');
+
+  const MODEL_DIR = 'http://localhost:8000/models/mp'; // 你下載模型放嘅資料夾
+
+  let detector=null, running=false, rafId=null;
+  let frames=0, lastT=0, fpsHist=[];
+  let frameStep=3, frameCount=0;
+
+  const say=(m,cls)=>{ const t=`[${new Date().toLocaleTimeString()}] ${m}\n`; log.textContent+=t; log.scrollTop=log.scrollHeight; diag.textContent=m; diag.className='badge '+(cls||''); };
+
+  async function loadDetector(){
+    const type = modelSel.value;
+    detector = await poseDetection.createDetector(
+      poseDetection.SupportedModels.BlazePose,
+      { runtime:'mediapipe', solutionPath: MODEL_DIR, modelType:type, enableSmoothing:true }
+    );
+    say(`BlazePose 載入成功（${type}，本地） ✅`,'ok');
+  }
+
+  const EDGES_BY_NAME = [
+    ['left_shoulder','left_elbow'],['left_elbow','left_wrist'],
+    ['right_shoulder','right_elbow'],['right_elbow','right_wrist'],
+    ['left_hip','left_knee'],['left_knee','left_ankle'],
+    ['right_hip','right_knee'],['right_knee','right_ankle'],
+    ['left_shoulder','right_shoulder'],['left_hip','right_hip'],
+    ['left_shoulder','left_hip'],['right_shoulder','right_hip']
+  ];
+  function drawPose(poses){
+    if (!poses?.length) return;
+    const k = poses[0].keypoints; if (!k?.length) return;
+    const byName = Object.fromEntries(k.map(kp => [kp.name, kp]));
+    for (const kp of k){ if (kp.score < 0.5) continue;
+      ctx.beginPath(); ctx.arc(kp.x, kp.y, 3.5, 0, Math.PI*2);
+      ctx.fillStyle = "#8bdcff"; ctx.fill();
+    }
+    ctx.lineWidth = 2; ctx.strokeStyle = "#61a0ff";
+    for (const [a,b] of EDGES_BY_NAME){
+      const p = byName[a], q = byName[b];
+      if (p?.score > 0.5 && q?.score > 0.5){
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+      }
+    }
+  }
+
+  function fitCanvasToVideo() {
+    if (!vid.videoWidth || !vid.videoHeight) return;
+    can.width = vid.videoWidth;
+    can.height = vid.videoHeight;
+  }
+
+  async function loop(t){
+    if (!running) return;
+    frameCount++;
+    if (frameCount % frameStep !== 0) return rafId=requestAnimationFrame(loop);
+
+    if (vid.readyState >= 2){
+      try {
+        const poses = await detector.estimatePoses(vid);
+        ctx.drawImage(vid, 0, 0, can.width, can.height);
+        drawPose(poses);
+        frames++;
+        if (lastT) { fpsHist.push(1000 / (t - lastT)); if (fpsHist.length > 30) fpsHist.shift(); }
+        lastT = t;
+        if (frames % 30 === 0) say(`Frames: ${frames} | ~${Math.round(fpsHist.reduce((a,b)=>a+b,0)/fpsHist.length||0)} FPS`);
+      } catch(e) {
+        say('估計失敗：'+e.message,'err'); running = false; return;
+      }
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+
+  file.onchange = () => {
+    const f = file.files[0]; if (!f) return;
+    vid.src = URL.createObjectURL(f);
+    vid.onloadedmetadata = () => {
+      fitCanvasToVideo();
+      vid.play().catch(()=>{});
+      say('🎞️ 影片就緒，按「開始」','ok');
+    };
+  };
+
+  cameraBtn.onclick = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
+      vid.srcObject = s;
+      vid.onloadedmetadata = () => {
+        fitCanvasToVideo();
+        vid.play();
+        say('📷 攝像頭就緒，按「開始」','ok');
+      };
+    } catch(e){ say('相機不可用：'+e.message,'err'); }
+  };
+
+  stopCameraBtn.onclick = () => {
+    if (vid.srcObject){
+      vid.srcObject.getTracks().forEach(t => t.stop());
+      vid.srcObject = null;
+      say('📴 攝像頭已關閉','warn');
+    } else {
+      say('⚠️ 沒有攝像頭正在運行','warn');
+    }
+  };
+
+  startBtn.onclick = async () => {
+    if (!vid.src && !vid.srcObject){ alert('先載入影片或開相機'); return; }
+    try {
+      if (!detector) { say('載入本地模型中…','warn'); await loadDetector(); }
+      running = true; if (vid.paused) await vid.play().catch(()=>{});
+      if (!rafId) rafId = requestAnimationFrame(loop);
+      say('▶️ 開始','ok');
+    } catch(e) {
+      say('❌ 模型載入失敗：'+e.message,'err');
+      alert('模型未載入：'+e.message);
+    }
+  };
+
+  pauseBtn.onclick = () => {
+    running = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    say('⏸ 暫停','warn');
+  };
+
+  selftestBtn.onclick = async () => {
+    log.textContent = ''; say('自檢中…','warn');
+    if (typeof poseDetection === 'undefined'){ say('❌ 找不到 pose-detection','err'); return; }
+    try { await loadDetector(); say('✅ 自檢完成：本地模型載入成功，可載入影片/相機再按「開始」','ok'); }
+    catch(e){ say('❌ 載入失敗：'+e.message,'err'); }
+  };
+
+  setTimeout(() => selftestBtn.click(), 200);
+})();
+</script>
+</body>
+</html>
