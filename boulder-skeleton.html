@@ -3,30 +3,74 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Boulder Skeleton — Local Only</title>
+<title>Boulder Skeleton — Pro (Adaptive Layout)</title>
 <style>
-  body { font-family: system-ui, sans-serif; margin: 0; background: #0b0c10; color: #e6e6e6 }
-  header { padding: 14px 18px; border-bottom: 1px solid #1f232b; display: flex; gap: 12px; align-items: center }
-  .badge { font-size: 12px; opacity: .9 }
-  main { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; padding: 16px }
-  section { background: #111318; border: 1px solid #1f232b; border-radius: 12px; overflow: hidden }
-  .pane-head { padding: 10px 14px; border-bottom: 1px solid #1f232b; font-weight: 600; display: flex; justify-content: space-between; align-items: center }
-  .pane-body { padding: 12px }
-  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
-  button, input[type=file], select { background: #1a1d24; border: 1px solid #2a2f3a; color: #e6e6e6; border-radius: 10px; padding: 8px 12px; cursor: pointer }
-  button:hover { background: #222632 }
-  canvas, video { max-width: 100%; border-radius: 10px; border: 1px solid #1f232b; background: #000 }
-  .log { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; white-space: pre-wrap; background: #0e1015; border: 1px solid #1f232b; border-radius: 8px; padding: 8px; max-height: 240px; overflow: auto }
-  .ok { color: #8be48b } .warn { color: #ffd37a } .err { color: #ff8b8b }
+  :root{
+    --bg:#0b0c10; --card:#111318; --line:#1f232b; --ink:#e6e6e6; --muted:#9fb0c4;
+    --side-w:320px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .badge{font-size:12px;opacity:.9}
+  .kpi{display:flex;gap:12px;align-items:center;font-size:12px;opacity:.9}
+  progress{height:10px}
+
+  /* 布局：主作業區 + 右側窄欄 */
+  .layout{
+    display:grid; grid-template-columns: 1fr var(--side-w); gap:16px; padding:16px;
+  }
+  section, aside{background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  .pane-head{padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;display:flex;justify-content:space-between;align-items:center}
+  .pane-body{padding:12px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button,input[type=file],select{background:#1a1d24;border:1px solid #2a2f3a;color:var(--ink);border-radius:10px;padding:8px 12px;cursor:pointer}
+  button:hover{background:#222632}
+  video,canvas{max-width:100%;border-radius:10px;border:1px solid var(--line);background:#000;display:block}
+
+  /* 右側更小、更節省空間 */
+  aside .pane-body{padding:10px}
+  .log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.35;white-space:pre-wrap;background:#0e1015;border:1px solid var(--line);border-radius:8px;padding:8px;max-height:200px;overflow:auto;color:var(--muted)}
+  .ai{white-space:pre-wrap;background:#0e1015;border:1px solid var(--line);border-radius:8px;padding:8px;min-height:72px;font-size:12px}
+  .ok{color:#8be48b}.warn{color:#ffd37a}.err{color:#ff8b8b}
+
+  /* 媒體區：依「影片方向」自適應 */
+  .media-grid{display:grid;gap:10px}
+  /* 橫向影片：overlay 在原始影片下方（上下排列） */
+  .landscape .media-grid{
+    grid-template-columns: 1fr;
+    grid-template-areas: "orig" "overlay";
+  }
+  /* 直向影片：原始與overlay 左右並排 */
+  .portrait .media-grid{
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "orig overlay";
+    align-items:start;
+  }
+  .origWrap{grid-area:orig}
+  .overlayWrap{grid-area:overlay}
+
+  /* 小螢幕：右側欄掉到下方 */
+  @media (max-width: 900px){
+    .layout{grid-template-columns: 1fr}
+    aside{order:2}
+  }
 </style>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22>🧗</text></svg>">
 </head>
 <body>
 <header>
-  <strong>🧗‍♂️ Boulder Skeleton — Local Only</strong>
+  <strong>🧗‍♂️ Boulder Skeleton — Pro</strong>
   <span class="badge" id="diag">初始化中…</span>
+  <div class="kpi">
+    <span>FPS: <b id="fps">0</b></span>
+    <span>Frames: <b id="frames">0</b></span>
+    <span>進度：<progress id="prog" max="1" value="0"></progress> <b id="tprog">0:00 / 0:00</b></span>
+  </div>
 </header>
 
-<main>
+<div class="layout">
+  <!-- 左：主作業區（控制 + 媒體） -->
   <section>
     <div class="pane-head"><div>視訊 / 影片</div><div></div></div>
     <div class="pane-body">
@@ -34,7 +78,7 @@
         <input id="file" type="file" accept="video/*" />
         <button id="cameraBtn">使用攝像頭</button>
         <button id="stopCameraBtn">關閉攝像頭</button>
-        <select id="modelSel">
+        <select id="modelSel" title="BlazePose 型號">
           <option value="lite">BlazePose Lite（快）</option>
           <option value="full" selected>BlazePose Full（均衡）</option>
           <option value="heavy">BlazePose Heavy（精確）</option>
@@ -42,23 +86,44 @@
         <button id="startBtn">開始</button>
         <button id="pauseBtn">暫停</button>
       </div>
-      <div class="row">
-        <video id="video" playsinline muted></video>
-        <canvas id="canvas"></canvas>
+
+      <div class="row" style="margin-bottom:8px">
+        <label style="display:flex;align-items:center;gap:6px"><input id="recToggle" type="checkbox"> 錄製 Overlay</label>
+        <button id="saveZipBtn" disabled>存 ZIP（影片 + poses.json + metrics.csv）</button>
+        <button id="aiBtn" title="用本機 Ollama 產生動作評語">🤖 AI Feedback</button>
+      </div>
+
+      <!-- 媒體區：依影片方向排版 -->
+      <div class="media-grid" id="mediaGrid">
+        <div class="origWrap">
+          <video id="video" playsinline muted></video>
+        </div>
+        <div class="overlayWrap">
+          <canvas id="canvas"></canvas>
+        </div>
       </div>
     </div>
   </section>
 
-  <section>
-    <div class="pane-head"><div>狀態 / 日誌</div><button id="selftestBtn">自檢</button></div>
-    <div class="pane-body"><div class="log" id="log">等待輸出…</div></div>
-  </section>
-</main>
+  <!-- 右：側欄（更小） -->
+  <aside>
+    <div class="pane-head">
+      <div>狀態 / 日誌</div>
+      <button id="selftestBtn">自檢</button>
+    </div>
+    <div class="pane-body">
+      <div class="log" id="log">等待輸出…</div>
+      <h4 style="margin:10px 0 6px;font-size:13px">🤖 AI 回饋</h4>
+      <div class="ai" id="aiOut">（按「AI Feedback」）</div>
+    </div>
+  </aside>
+</div>
 
-<!-- BlazePose Mediapipe -->
+<!-- 依賴：TFJS（供 env）、pose-detection 2.x、Mediapipe、JSZip（壓縮） -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.0/dist/pose-detection.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
 <script>
 (() => {
@@ -67,14 +132,89 @@
   const file=$('file'), startBtn=$('startBtn'), pauseBtn=$('pauseBtn'),
         cameraBtn=$('cameraBtn'), stopCameraBtn=$('stopCameraBtn'), modelSel=$('modelSel');
   const log=$('log'), diag=$('diag'), selftestBtn=$('selftestBtn');
+  const fpsEl=$('fps'), framesEl=$('frames'), prog=$('prog'), tprog=$('tprog');
+  const recToggle=$('recToggle'), saveZipBtn=$('saveZipBtn'), aiBtn=$('aiBtn'), aiOut=$('aiOut');
 
-  const MODEL_DIR = 'http://localhost:8000/models/mp'; // 你下載模型放嘅資料夾
+  // ⭐ 你的本地模型目錄（需要與實際放置一致）
+    const USE_LOCAL_MODELS = false; // 線上測試時保持 false
+    const LOCAL_MODEL_DIR  = `${location.origin}/models/mp`;
+
+    // 指向你放在 GitHub 的模型目錄（jsDelivr CDN）：
+    // 注意不要加上具體檔名 — createDetector 會去找預期的檔案名稱（如 pose_landmark_full.tflite）
+    const CDN_MODEL_DIR = 'https://cdn.jsdelivr.net/gh/thinskin-max/skeleton-models@main/models';
+
+    const MODEL_DIR = USE_LOCAL_MODELS ? LOCAL_MODEL_DIR : CDN_MODEL_DIR;
 
   let detector=null, running=false, rafId=null;
   let frames=0, lastT=0, fpsHist=[];
   let frameStep=3, frameCount=0;
 
+  const EDGES_BY_NAME = [
+    ['left_shoulder','left_elbow'],['left_elbow','left_wrist'],
+    ['right_shoulder','right_elbow'],['right_elbow','right_wrist'],
+    ['left_hip','left_knee'],['left_knee','left_ankle'],
+    ['right_hip','right_knee'],['right_knee','right_ankle'],
+    ['left_shoulder','right_shoulder'],['left_hip','right_hip'],
+    ['left_shoulder','left_hip'],['right_shoulder','right_hip']
+  ];
+
+  // Overlay 錄影
+  let rec=null, recChunks=[];
+  const poseLog=[];
+
   const say=(m,cls)=>{ const t=`[${new Date().toLocaleTimeString()}] ${m}\n`; log.textContent+=t; log.scrollTop=log.scrollHeight; diag.textContent=m; diag.className='badge '+(cls||''); };
+  const pad=s=>String(s).padStart(2,'0');
+  const fmtTime=sec=>`${Math.floor(sec/60)}:${pad(Math.floor(sec%60))}`;
+
+  function fitCanvasToVideo(){
+    if (!vid.videoWidth || !vid.videoHeight) return;
+    can.width = vid.videoWidth;
+    can.height = vid.videoHeight;
+
+    // 依影片方向切換版面（portrait=左右；landscape=上下）
+    if (vid.videoHeight > vid.videoWidth) {
+      document.body.classList.add('portrait');
+      document.body.classList.remove('landscape');
+    } else {
+      document.body.classList.add('landscape');
+      document.body.classList.remove('portrait');
+    }
+  }
+
+  function angle(a,b,c){ if(!a||!b||!c) return null;
+    const ab=[a.x-b.x,a.y-b.y], cb=[c.x-b.x,c.y-b.y];
+    const dot=ab[0]*cb[0]+ab[1]*cb[1], mab=Math.hypot(...ab), mcb=Math.hypot(...cb);
+    if(mab*mcb===0) return null;
+    return +(Math.acos(Math.min(1,Math.max(-1,dot/(mab*mcb))))*180/Math.PI).toFixed(1);
+  }
+  function tri(a,b,c){ if(!a||!b||!c) return null;
+    return Math.abs((a.x*(b.y-c.y)+b.x*(c.y-a.y)+c.x*(a.y-b.y))/2);
+  }
+
+  function drawSkeleton(k){
+    const byName = Object.fromEntries(k.map(kp=>[kp.name,kp]));
+    for(const kp of k){ if(kp.score<0.5) continue;
+      ctx.beginPath(); ctx.arc(kp.x,kp.y,3.5,0,Math.PI*2);
+      ctx.fillStyle="#8bdcff"; ctx.fill();
+    }
+    ctx.lineWidth=2; ctx.strokeStyle="#61a0ff";
+    for(const [a,b] of EDGES_BY_NAME){
+      const p=byName[a], q=byName[b];
+      if(p?.score>0.5 && q?.score>0.5){
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.stroke();
+      }
+    }
+  }
+
+  function summarize(byName){
+    const la = angle(byName['left_shoulder'],byName['left_elbow'],byName['left_wrist']);
+    const ra = angle(byName['right_shoulder'],byName['right_elbow'],byName['right_wrist']);
+    const lk = angle(byName['left_hip'],byName['left_knee'],byName['left_ankle']);
+    const rk = angle(byName['right_hip'],byName['right_knee'],byName['right_ankle']);
+    const baseL = tri(byName['left_shoulder'],byName['left_hip'],byName['left_ankle']);
+    const baseR = tri(byName['right_shoulder'],byName['right_hip'],byName['right_ankle']);
+    return {elbowL:la, elbowR:ra, kneeL:lk, kneeR:rk, baseL, baseR};
+  }
 
   async function loadDetector(){
     const type = modelSel.value;
@@ -85,117 +225,148 @@
     say(`BlazePose 載入成功（${type}，本地） ✅`,'ok');
   }
 
-  const EDGES_BY_NAME = [
-    ['left_shoulder','left_elbow'],['left_elbow','left_wrist'],
-    ['right_shoulder','right_elbow'],['right_elbow','right_wrist'],
-    ['left_hip','left_knee'],['left_knee','left_ankle'],
-    ['right_hip','right_knee'],['right_knee','right_ankle'],
-    ['left_shoulder','right_shoulder'],['left_hip','right_hip'],
-    ['left_shoulder','left_hip'],['right_shoulder','right_hip']
-  ];
-  function drawPose(poses){
-    if (!poses?.length) return;
-    const k = poses[0].keypoints; if (!k?.length) return;
-    const byName = Object.fromEntries(k.map(kp => [kp.name, kp]));
-    for (const kp of k){ if (kp.score < 0.5) continue;
-      ctx.beginPath(); ctx.arc(kp.x, kp.y, 3.5, 0, Math.PI*2);
-      ctx.fillStyle = "#8bdcff"; ctx.fill();
-    }
-    ctx.lineWidth = 2; ctx.strokeStyle = "#61a0ff";
-    for (const [a,b] of EDGES_BY_NAME){
-      const p = byName[a], q = byName[b];
-      if (p?.score > 0.5 && q?.score > 0.5){
-        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
-      }
-    }
+  function updateProgressUI(){
+    if (isFinite(vid.duration) && vid.duration>0){
+      prog.max=1; prog.value=Math.min(1, vid.currentTime/vid.duration);
+      tprog.textContent=`${fmtTime(vid.currentTime)} / ${fmtTime(vid.duration)}`;
+    } else { prog.value=0; tprog.textContent='0:00 / 0:00'; }
   }
 
-  function fitCanvasToVideo() {
-    if (!vid.videoWidth || !vid.videoHeight) return;
-    can.width = vid.videoWidth;
-    can.height = vid.videoHeight;
+  function pickMime() {
+  const cand = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/mp4;codecs=h264'      // iOS Safari 常見僅此可錄
+  ];
+  for (const t of cand) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
   }
+  return ''; // 不支援錄影
+}
+
+function startRecordingIfNeeded(){
+  if (!recToggle.checked || rec) return;
+
+  const mime = pickMime();
+  if (!mime) { 
+    say('⚠️ 此瀏覽器不支援 MediaRecorder 錄影','warn');
+    recToggle.checked = false;
+    saveZipBtn.disabled = true;
+    return;
+  }
+
+  const stream = can.captureStream( (mime.includes('mp4') ? 30 : 60) ); // Safari 上 MP4 通常 30fps 較穩
+  recChunks = [];
+  try {
+    rec = new MediaRecorder(stream, { mimeType: mime });
+  } catch (e) {
+    say('Recorder 初始化失敗：' + e.message, 'err');
+    recToggle.checked = false;
+    return;
+  }
+  rec.ondataavailable = e => { if (e.data?.size) recChunks.push(e.data); };
+  rec.onstop = () => console.log(`[🎥] 錄影完成, mime=${mime}, size=${recChunks.reduce((s,b)=>s+b.size,0)} bytes`);
+  rec.start();
+  saveZipBtn.disabled = false;
+  say(`🎥 Overlay 錄影開始（${mime}）`,'ok');
+}
+
 
   async function loop(t){
     if (!running) return;
-    frameCount++;
-    if (frameCount % frameStep !== 0) return rafId=requestAnimationFrame(loop);
+    frameCount++; if (frameCount%frameStep!==0) return rafId=requestAnimationFrame(loop);
 
-    if (vid.readyState >= 2){
-      try {
+    if (vid.readyState>=2){
+      try{
         const poses = await detector.estimatePoses(vid);
-        ctx.drawImage(vid, 0, 0, can.width, can.height);
-        drawPose(poses);
-        frames++;
-        if (lastT) { fpsHist.push(1000 / (t - lastT)); if (fpsHist.length > 30) fpsHist.shift(); }
-        lastT = t;
-        if (frames % 30 === 0) say(`Frames: ${frames} | ~${Math.round(fpsHist.reduce((a,b)=>a+b,0)/fpsHist.length||0)} FPS`);
-      } catch(e) {
-        say('估計失敗：'+e.message,'err'); running = false; return;
-      }
+        ctx.drawImage(vid,0,0,can.width,can.height);
+        const k = poses[0]?.keypoints || [];
+        if (k.length){
+          drawSkeleton(k);
+          const byName = Object.fromEntries(k.map(kp=>[kp.name,kp]));
+          const metrics = summarize(byName);
+          poseLog.push({ t:+vid.currentTime.toFixed(3), keypoints:k.map(({name,x,y,score})=>({name,x,y,score})), angles:metrics });
+        }
+        // KPI
+        frames++; framesEl.textContent=frames;
+        if (lastT){ const inst=1000/(t-lastT); fpsHist.push(inst); if(fpsHist.length>30) fpsHist.shift(); }
+        lastT=t; const avg=fpsHist.length?Math.round(fpsHist.reduce((a,b)=>a+b,0)/fpsHist.length):0; $('fps').textContent=avg;
+        updateProgressUI(); startRecordingIfNeeded();
+      }catch(e){ say('估計失敗：'+e.message,'err'); running=false; return; }
     }
-    rafId = requestAnimationFrame(loop);
+    rafId=requestAnimationFrame(loop);
   }
 
-  file.onchange = () => {
-    const f = file.files[0]; if (!f) return;
-    vid.src = URL.createObjectURL(f);
-    vid.onloadedmetadata = () => {
-      fitCanvasToVideo();
-      vid.play().catch(()=>{});
-      say('🎞️ 影片就緒，按「開始」','ok');
-    };
+  // === 事件 ===
+  file.onchange=()=>{ const f=file.files[0]; if(!f) return;
+    vid.src=URL.createObjectURL(f);
+    vid.onloadedmetadata=()=>{ fitCanvasToVideo(); vid.play().catch(()=>{}); say('🎞️ 影片就緒，按「開始」','ok'); updateProgressUI(); };
+    vid.ontimeupdate=updateProgressUI;
   };
-
-  cameraBtn.onclick = async () => {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
-      vid.srcObject = s;
-      vid.onloadedmetadata = () => {
-        fitCanvasToVideo();
-        vid.play();
-        say('📷 攝像頭就緒，按「開始」','ok');
-      };
-    } catch(e){ say('相機不可用：'+e.message,'err'); }
+  cameraBtn.onclick=async()=>{ try{
+      const s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+      vid.srcObject=s; vid.onloadedmetadata=()=>{ fitCanvasToVideo(); vid.play(); say('📷 攝像頭就緒，按「開始」','ok'); updateProgressUI(); };
+      vid.ontimeupdate=updateProgressUI;
+    }catch(e){ say('相機不可用：'+e.message,'err'); }
   };
+  stopCameraBtn.onclick=()=>{ if(vid.srcObject){ vid.srcObject.getTracks().forEach(t=>t.stop()); vid.srcObject=null; say('📴 攝像頭已關閉','warn'); } else { say('⚠️ 沒有攝像頭正在運行','warn'); } };
 
-  stopCameraBtn.onclick = () => {
-    if (vid.srcObject){
-      vid.srcObject.getTracks().forEach(t => t.stop());
-      vid.srcObject = null;
-      say('📴 攝像頭已關閉','warn');
-    } else {
-      say('⚠️ 沒有攝像頭正在運行','warn');
-    }
-  };
-
-  startBtn.onclick = async () => {
-    if (!vid.src && !vid.srcObject){ alert('先載入影片或開相機'); return; }
-    try {
-      if (!detector) { say('載入本地模型中…','warn'); await loadDetector(); }
-      running = true; if (vid.paused) await vid.play().catch(()=>{});
-      if (!rafId) rafId = requestAnimationFrame(loop);
+  startBtn.onclick=async()=>{ 
+    if(!vid.src && !vid.srcObject){ alert('先載入影片或開相機'); return; }
+    try{
+      if(!detector){ say('載入本地模型中…','warn'); await loadDetector(); }
+      poseLog.length=0; frames=0; fpsHist.length=0; lastT=0;
+      running=true; if(vid.paused) await vid.play().catch(()=>{});
+      if(!rafId) rafId=requestAnimationFrame(loop);
       say('▶️ 開始','ok');
-    } catch(e) {
-      say('❌ 模型載入失敗：'+e.message,'err');
-      alert('模型未載入：'+e.message);
-    }
+    }catch(e){ say('❌ 模型載入失敗：'+e.message,'err'); }
   };
+  pauseBtn.onclick=()=>{ running=false; if(rafId){ cancelAnimationFrame(rafId); rafId=null; } say('⏸ 暫停','warn'); };
 
-  pauseBtn.onclick = () => {
-    running = false;
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    say('⏸ 暫停','warn');
-  };
-
-  selftestBtn.onclick = async () => {
-    log.textContent = ''; say('自檢中…','warn');
-    if (typeof poseDetection === 'undefined'){ say('❌ 找不到 pose-detection','err'); return; }
-    try { await loadDetector(); say('✅ 自檢完成：本地模型載入成功，可載入影片/相機再按「開始」','ok'); }
+  selftestBtn.onclick=async()=>{ log.textContent=''; say('自檢中…','warn');
+    if(typeof poseDetection==='undefined'){ say('❌ 找不到 pose-detection','err'); return; }
+    try{ await loadDetector(); say('✅ 自檢完成：本地模型載入成功，可載入影片/相機再按「開始」','ok'); }
     catch(e){ say('❌ 載入失敗：'+e.message,'err'); }
   };
 
-  setTimeout(() => selftestBtn.click(), 200);
+  // 下載 ZIP
+  $('saveZipBtn').onclick=async()=>{ try{
+      const zip=new JSZip();
+      const vblob=await stopRecordingBlob(); if(vblob) zip.file('overlay.webm', vblob);
+      zip.file('poses.json', JSON.stringify({meta:{createdAt:new Date().toISOString(),model:'BlazePose/mediapipe',modelType:modelSel.value,width:can.width,height:can.height,frameStep},frames:poseLog},null,2));
+      const csvHeader='t,elbowL,elbowR,kneeL,kneeR,baseL,baseR\n';
+      const csvBody=poseLog.map(r=>{const a=r.angles||{};return [r.t,a.elbowL??'',a.elbowR??'',a.kneeL??'',a.kneeR??'',a.baseL??'',a.baseR??''].join(',');}).join('\n');
+      zip.file('metrics.csv', csvHeader+csvBody);
+      const blob=await zip.generateAsync({type:'blob'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`boulder_skeleton_${Date.now()}.zip`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+      say('📦 ZIP 已下載','ok');
+    }catch(e){ say('ZIP 失敗：'+e.message,'err'); }
+  };
+
+  // 🤖 Ollama
+  $('aiBtn').onclick=async()=>{ try{
+      if(!poseLog.length){ $('aiOut').textContent='請先開始分析，產生一些幀資料。'; return; }
+      const T=poseLog[poseLog.length-1].t; const recent=poseLog.filter(r=>T-r.t<=5);
+      const avg=(arr,key)=>{const v=arr.map(x=>x?.angles?.[key]).filter(Number.isFinite);return v.length?+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):null;};
+      const summary={windowSec:Math.min(5,Math.round(T)),elbowL:avg(recent,'elbowL'),elbowR:avg(recent,'elbowR'),kneeL:avg(recent,'kneeL'),kneeR:avg(recent,'kneeR'),baseL:avg(recent,'baseL'),baseR:avg(recent,'baseR')};
+      const prompt=`You are a climbing movement coach.
+Given average joint metrics over last ${summary.windowSec}s:
+- Elbow(L/R): ${summary.elbowL}/${summary.elbowR} deg
+- Knee(L/R): ${summary.kneeL}/${summary.kneeR} deg
+- Base area(L/R): ${summary.baseL}/${summary.baseR}
+Provide 3 terse, practical coaching cues to improve body position for lead climbing. Use bullet points.`;
+      $('aiOut').textContent='呼叫 Ollama 中…';
+      const resp=await fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'mistral',prompt,stream:false})}).then(r=>r.ok?r.json():Promise.reject(new Error(r.status+' '+r.statusText)));
+      $('aiOut').textContent=(resp?.response||'').trim()||'（Ollama 沒有回傳內容）';
+      say('🤖 AI 回饋完成','ok');
+    }catch(e){
+      $('aiOut').textContent='無法連到 Ollama。請在本機執行並設定 CORS（OLLAMA_ORIGINS=*）。\n錯誤：'+e.message;
+      say('AI 失敗：'+e.message,'err');
+    }
+  };
+
+  // 初始化：輕觸自檢
+  setTimeout(()=>selftestBtn.click(),200);
 })();
 </script>
 </body>
