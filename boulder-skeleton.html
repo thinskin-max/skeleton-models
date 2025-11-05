@@ -136,12 +136,9 @@
   const recToggle=$('recToggle'), saveZipBtn=$('saveZipBtn'), aiBtn=$('aiBtn'), aiOut=$('aiOut');
 
   // ⭐ 你的本地模型目錄（需要與實際放置一致）
-    const USE_LOCAL_MODELS = false; // 線上測試時保持 false
+    const USE_LOCAL_MODELS = false; // ← 先設 false，確認能跑；OK 後改 true
     const LOCAL_MODEL_DIR  = `${location.origin}/models/mp`;
-
-    // 指向你放在 GitHub 的模型目錄（jsDelivr CDN）：
-    // 注意不要加上具體檔名 — createDetector 會去找預期的檔案名稱（如 pose_landmark_full.tflite）
-    const CDN_MODEL_DIR = 'https://cdn.jsdelivr.net/gh/thinskin-max/skeleton-models@main/models';
+    const CDN_MODEL_DIR    = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404';
 
     const MODEL_DIR = USE_LOCAL_MODELS ? LOCAL_MODEL_DIR : CDN_MODEL_DIR;
 
@@ -160,6 +157,39 @@
 
   // Overlay 錄影
   let rec=null, recChunks=[];
+// ---- 補上 stopRecordingBlob（你目前有呼叫，但未定義） ----
+async function stopRecordingBlob() {
+  if (!rec) {
+    // 沒有錄影就沒有 Blob；保持與你現有流程相容
+    return null;
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const local = rec; // 固定引用，避免之後被覆寫
+      local.onstop = () => {
+        try {
+          const mime = (typeof local.mimeType === 'string' && local.mimeType) ? local.mimeType : 'video/webm';
+          const blob = new Blob(recChunks || [], { type: mime });
+          // 重置狀態，避免下次誤用舊資料
+          rec = null;
+          recChunks = [];
+          resolve(blob);
+        } catch (err) { reject(err); }
+      };
+      local.onerror = (e) => reject(e?.error || e);
+      // 觸發結束 → onstop 會把 chunks 打包成 Blob
+      local.stop();
+    } catch (e) { reject(e); }
+  });
+}
+pauseBtn.onclick = () => {
+  running = false;
+  if (rafId){ cancelAnimationFrame(rafId); rafId = null; }
+  // 若正在錄影則順手停掉（不中斷 ZIP；ZIP 時仍會再呼叫 stopRecordingBlob 去取 blob）
+  if (rec && rec.state === 'recording') { try { rec.stop(); } catch(e){} }
+  say('⏸ 暫停','warn');
+};
+
   const poseLog=[];
 
   const say=(m,cls)=>{ const t=`[${new Date().toLocaleTimeString()}] ${m}\n`; log.textContent+=t; log.scrollTop=log.scrollHeight; diag.textContent=m; diag.className='badge '+(cls||''); };
