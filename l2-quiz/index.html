@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catch萌 Level 2 Sport Climbing 測驗</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #5c6570;
+    --border: #dde2e8;
+    --accent: #0b6e4f;
+    --accent-hover: #095c42;
+    --correct: #e8f7ee;
+    --correct-border: #2e9b57;
+    --wrong: #fdecea;
+    --wrong-border: #d64545;
+    --pass: #0b6e4f;
+    --fail: #b42318;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+      "Hiragino Sans CNS", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    line-height: 1.55;
+    font-size: 16px;
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 16px 14px 48px;
+  }
+  header {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 18px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 1.35rem;
+    line-height: 1.3;
+  }
+  .subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .meta {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    align-items: center;
+  }
+  label.name-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9rem;
+    color: var(--muted);
+    flex: 1 1 220px;
+  }
+  input[type="text"] {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    background: #fff;
+    color: var(--text);
+    width: 100%;
+  }
+  input[type="text"]:focus {
+    outline: 2px solid rgba(11, 110, 79, 0.35);
+    border-color: var(--accent);
+  }
+  .pass-note {
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+  .q {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 16px 12px;
+    margin-bottom: 12px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .q.correct {
+    background: var(--correct);
+    border-color: var(--correct-border);
+  }
+  .q.wrong {
+    background: var(--wrong);
+    border-color: var(--wrong-border);
+  }
+  .q-title {
+    font-weight: 600;
+    margin: 0 0 10px;
+    font-size: 1rem;
+  }
+  .opts {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .opt {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .opt:hover { background: rgba(0,0,0,0.03); }
+  .opt input {
+    margin-top: 3px;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+  }
+  .opt span { flex: 1; }
+  .feedback {
+    display: none;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    background: rgba(255,255,255,0.65);
+    border: 1px dashed var(--border);
+  }
+  .q.correct .feedback,
+  .q.wrong .feedback { display: block; }
+  .feedback strong { font-weight: 700; }
+  .actions {
+    position: sticky;
+    bottom: 0;
+    background: rgba(246, 247, 249, 0.95);
+    backdrop-filter: blur(6px);
+    padding: 12px 0 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  button {
+    appearance: none;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #submitBtn {
+    background: var(--accent);
+    color: #fff;
+    flex: 1 1 160px;
+  }
+  #submitBtn:hover { background: var(--accent-hover); }
+  #resetBtn {
+    background: #fff;
+    color: var(--text);
+    border: 1px solid var(--border);
+    flex: 1 1 120px;
+  }
+  #resetBtn:hover { background: #f0f2f4; }
+  #result {
+    display: none;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin: 16px 0;
+  }
+  #result.show { display: block; }
+  #result h2 {
+    margin: 0 0 8px;
+    font-size: 1.2rem;
+  }
+  .score-line {
+    font-size: 1.05rem;
+    margin: 4px 0;
+  }
+  .badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .badge.pass { background: var(--pass); }
+  .badge.fail { background: var(--fail); }
+  .unanswered-warn {
+    color: var(--fail);
+    font-size: 0.9rem;
+    margin-top: 6px;
+  }
+  footer {
+    margin-top: 20px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-align: center;
+  }
+  @media (max-width: 480px) {
+    h1 { font-size: 1.18rem; }
+    .wrap { padding: 12px 10px 40px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Catch萌 Level 2 Sport Climbing 測驗</h1>
+    <p class="subtitle">Climb &amp; Belay 試題 · 共 <span id="qCount">40</span> 題 · 合格分數 <span id="passPct">80</span>%</p>
+    <div class="meta">
+      <label class="name-label">姓名（可選，只顯示喺成績，唔會傳送）
+        <input type="text" id="studentName" placeholder="例如：陳大文" autocomplete="name">
+      </label>
+      <p class="pass-note">全部題目計分 · 單選 · 交卷即時改卷</p>
+    </div>
+  </header>
+
+  <div id="result" aria-live="polite"></div>
+  <form id="quizForm" novalidate></form>
+
+  <div class="actions">
+    <button type="button" id="submitBtn">交卷改分</button>
+    <button type="button" id="resetBtn">重新作答</button>
+  </div>
+
+  <footer>Catch萌 · Level 2 Sport Climbing（Hong Kong）· 試題僅供課程練習</footer>
+</div>
+
+<!--
+  Q22 answer confirmed by Joel: B.
+  Rule: before the 4th clip, stay close to the wall / first bolt.
+-->
+<script>
+/* ============================================================
+   Easy-to-edit constants
+   ============================================================ */
+var PASS_MARK = 0.80; // 80% 合格
+
+/* ============================================================
+   Questions — kept as in /workspace/catchmeng-lv2-quiz.md
+   answer: letter "A"/"B"/"C"/"D"
+   note: optional short note shown after grading (from source notes)
+   ============================================================ */
+var QUESTIONS = [
+  {
+    "id": 1,
+    "text": "Q1. 喺任何 belay 過程中，關於「制動手（brake hand）」嘅規定係乜嘢？",
+    "options": [
+      {
+        "key": "A",
+        "text": "可以喺攀登者休息時放開"
+      },
+      {
+        "key": "B",
+        "text": "不得離開主繩"
+      },
+      {
+        "key": "C",
+        "text": "必須放喺 Gri Gri 上方"
+      },
+      {
+        "key": "D",
+        "text": "只可以用兩隻手指握繩"
+      }
+    ],
+    "answer": "B",
+    "note": "制動手係控制墜落嘅唯一保障，任何時候都絕對唔可以離開防護繩。"
+  },
+  {
+    "id": 2,
+    "text": "Q2. 安裝 Gri Gri 時，下列邊種情況屬於嚴重缺失？",
+    "options": [
+      {
+        "key": "A",
+        "text": "用有鎖活扣扣喺 belay loop 並上鎖"
+      },
+      {
+        "key": "B",
+        "text": "裝錯方向而未有更正"
+      },
+      {
+        "key": "C",
+        "text": "裝喺 belay loop 上"
+      },
+      {
+        "key": "D",
+        "text": "用喺單條動力繩上"
+      }
+    ],
+    "answer": "B",
+    "note": "Gri Gri 裝錯方向會令凸輪無法鎖繩，攀登者墜落時可能制動唔到，必須喺攀登前發現並更正。"
+  },
+  {
+    "id": 3,
+    "text": "Q3. 裝置 Gri Gri 或鎖扣時，應避免以下邊種行為？",
+    "options": [
+      {
+        "key": "A",
+        "text": "裝好後檢查鎖扣有冇上鎖"
+      },
+      {
+        "key": "B",
+        "text": "裝置時令器材跌落地"
+      },
+      {
+        "key": "C",
+        "text": "用雙手操作"
+      },
+      {
+        "key": "D",
+        "text": "裝好後拉一拉繩測試 Gri Gri 能否鎖繩"
+      }
+    ],
+    "answer": "B",
+    "note": "活扣同防護器唔可以隨意掉落地或從高處掉下，撞擊可能造成肉眼睇唔到嘅損傷。"
+  },
+  {
+    "id": 4,
+    "text": "Q4. 開始領攀之前，belayer 同 climber 之間一定要做咩溝通？",
+    "options": [
+      {
+        "key": "A",
+        "text": "討論路線難度"
+      },
+      {
+        "key": "B",
+        "text": "確認攀登口號"
+      },
+      {
+        "key": "C",
+        "text": "確認攀登者岩鞋尺碼"
+      },
+      {
+        "key": "D",
+        "text": "詢問其他學員意見"
+      }
+    ],
+    "answer": "B",
+    "note": "攀登前雙方要對清楚口號（例如收繩、拉實、俾繩），未收到 belayer 回應「O.K.」之前唔可以開始攀登。"
+  },
+  {
+    "id": 5,
+    "text": "Q5. 課程對 belay 動作（收繩同俾繩）嘅基本要求係乜嘢？",
+    "options": [
+      {
+        "key": "A",
+        "text": "動作越快越好"
+      },
+      {
+        "key": "B",
+        "text": "流程必須熟練"
+      },
+      {
+        "key": "C",
+        "text": "必須使用歐式確保"
+      },
+      {
+        "key": "D",
+        "text": "整個過程要保持沉默"
+      }
+    ],
+    "answer": "B",
+    "note": "防護系統運作要求「熟練的收繩步驟」，收繩、俾繩要流暢自然，先可以配合攀登者並及時制動。"
+  },
+  {
+    "id": 6,
+    "text": "Q6. Belay 時繩索要流暢，應避免以下邊種影響攀登嘅情況？",
+    "options": [
+      {
+        "key": "A",
+        "text": "預留少許鬆繩方便攀登者入繩"
+      },
+      {
+        "key": "B",
+        "text": "俾繩唔切、卡住攀登者（卡繩）"
+      },
+      {
+        "key": "C",
+        "text": "收繩動作保持順暢"
+      },
+      {
+        "key": "D",
+        "text": "走位配合攀登者移動"
+      }
+    ],
+    "answer": "B",
+    "note": "俾繩唔切會扯住攀登者，影響動作甚至令佢失平衡；belayer 要走位配合，避免繩索阻礙領攀者。"
+  },
+  {
+    "id": 7,
+    "text": "Q7. Belay 時嘅專注度，下列邊種行為會被視為失當？",
+    "options": [
+      {
+        "key": "A",
+        "text": "一直注視攀登者"
+      },
+      {
+        "key": "B",
+        "text": "觀察周圍環境安全"
+      },
+      {
+        "key": "C",
+        "text": "隨時留意繩索鬆緊"
+      },
+      {
+        "key": "D",
+        "text": "同旁人傾偈或不專心"
+      }
+    ],
+    "answer": "D",
+    "note": "防護者必須專心，留意領攀者動向；攀登者嘅安全掌握喺防護者手中，任何時候都唔可以鬆懈。"
+  },
+  {
+    "id": 8,
+    "text": "Q8. 為咗保障個人安全，belay 時 belayer 必須著乜嘢？",
+    "options": [
+      {
+        "key": "A",
+        "text": "拖鞋"
+      },
+      {
+        "key": "B",
+        "text": "涼鞋"
+      },
+      {
+        "key": "C",
+        "text": "鞋（運動鞋或岩鞋）"
+      },
+      {
+        "key": "D",
+        "text": "赤腳"
+      }
+    ],
+    "answer": "C",
+    "note": "Belayer 要隨時走位同承受攀登者墜落嘅拉力，必須著包腳嘅鞋，先企得穩同保護雙腳。"
+  },
+  {
+    "id": 9,
+    "text": "Q9. 開始領攀前，belayer 應該點樣處理主繩？",
+    "options": [
+      {
+        "key": "A",
+        "text": "喺繩中間打結固定"
+      },
+      {
+        "key": "B",
+        "text": "揉繩（理順），並喺繩尾打繩尾結"
+      },
+      {
+        "key": "C",
+        "text": "直接將繩頭扣入 Gri Gri，唔使理順"
+      },
+      {
+        "key": "D",
+        "text": "直接使用，唔需要處理"
+      }
+    ],
+    "answer": "B",
+    "note": "攀登前要理順條繩，並喺繩尾打結或綁喺繩袋上，以防條繩唔夠長時由防護器滑出導致意外。"
+  },
+  {
+    "id": 10,
+    "text": "Q10. 領攀 belay 時，belayer 嘅腳應避免以下邊種情況？",
+    "options": [
+      {
+        "key": "A",
+        "text": "按需要前後走位配合攀登者"
+      },
+      {
+        "key": "B",
+        "text": "踩住主繩"
+      },
+      {
+        "key": "C",
+        "text": "留意腳邊繩堆位置"
+      },
+      {
+        "key": "D",
+        "text": "一腳前一腳後企穩"
+      }
+    ],
+    "answer": "B",
+    "note": "踩住主繩會令俾繩受阻、扯住攀登者，墜落時亦可能令 belayer 失平衡，同時會損傷繩索。"
+  },
+  {
+    "id": 11,
+    "text": "Q11. 揉繩之後，主繩應該擺喺邊度？",
+    "options": [
+      {
+        "key": "A",
+        "text": "隨意堆喺地上"
+      },
+      {
+        "key": "B",
+        "text": "擺喺唔影響確保、亦唔使經常搬動嘅位置"
+      },
+      {
+        "key": "C",
+        "text": "擺喺攀登者正下方"
+      },
+      {
+        "key": "D",
+        "text": "堆喺自己腳下"
+      }
+    ],
+    "answer": "B",
+    "note": "繩堆要擺喺 belayer 側邊、唔會被踩到又唔使中途搬動嘅位置，俾繩先會順暢。"
+  },
+  {
+    "id": 12,
+    "text": "Q12. 領攀 belay 時，如果 belayer 冇著鞋，教練會點處理？",
+    "options": [
+      {
+        "key": "A",
+        "text": "口頭提醒，繼續操作"
+      },
+      {
+        "key": "B",
+        "text": "即時停止操作，著好鞋先可以繼續"
+      },
+      {
+        "key": "C",
+        "text": "由佢繼續，落堂先講"
+      },
+      {
+        "key": "D",
+        "text": "扣分但可以繼續"
+      }
+    ],
+    "answer": "B",
+    "note": "冇著鞋 belay 屬安全問題，教練會即時停止操作，著好鞋先可以繼續。"
+  },
+  {
+    "id": 13,
+    "text": "Q13. 攀登者同 belayer 應該「確實互相檢查」邊啲項目？",
+    "options": [
+      {
+        "key": "A",
+        "text": "安全帶（有冇反扣）、八字結、Gri Gri 同鎖扣"
+      },
+      {
+        "key": "B",
+        "text": "岩鞋、粉袋、水樽、衣服"
+      },
+      {
+        "key": "C",
+        "text": "頭盔顏色、繩嘅牌子、路線難度"
+      },
+      {
+        "key": "D",
+        "text": "quickdraw 數量、路線顏色"
+      }
+    ],
+    "answer": "A",
+    "note": "攀登前雙方必須互相檢查，特別係鎖扣有冇上鎖、安全帶有冇反扣（double back）、八字結同防護器有冇裝啱。"
+  },
+  {
+    "id": 14,
+    "text": "Q14. Climber 掛第一個 quickdraw 之前，belayer 必須做咩保護動作？",
+    "options": [
+      {
+        "key": "A",
+        "text": "俾一大段鬆繩"
+      },
+      {
+        "key": "B",
+        "text": "舉起雙手做抱石保護（spot）"
+      },
+      {
+        "key": "C",
+        "text": "企遠啲方便睇清成條路線"
+      },
+      {
+        "key": "D",
+        "text": "將繩收到好實"
+      }
+    ],
+    "answer": "B",
+    "note": "未扣上第一個保護點之前，條繩仲保護唔到攀登者，belayer 要注視領攀者並做抱石保護。"
+  },
+  {
+    "id": 15,
+    "text": "Q15. 關於抱石保護（spot）嘅姿勢，下列邊項正確？",
+    "options": [
+      {
+        "key": "A",
+        "text": "單手扶住岩壁"
+      },
+      {
+        "key": "B",
+        "text": "位置正確、姿勢穩定"
+      },
+      {
+        "key": "C",
+        "text": "企喺離岩壁幾米外"
+      },
+      {
+        "key": "D",
+        "text": "背向攀登者"
+      }
+    ],
+    "answer": "B",
+    "note": "抱石保護要企喺攀登者可能墜落嘅位置後方，雙腳企穩、身體穩定，先可以引導攀登者安全落地。"
+  },
+  {
+    "id": 16,
+    "text": "Q16. 做抱石保護（spot）時，雙手應該點樣？",
+    "options": [
+      {
+        "key": "A",
+        "text": "放喺口袋"
+      },
+      {
+        "key": "B",
+        "text": "舉起準備扶住攀登者腰臀位置，手指併攏"
+      },
+      {
+        "key": "C",
+        "text": "垂喺身體兩側"
+      },
+      {
+        "key": "D",
+        "text": "攬住胸口觀察"
+      }
+    ],
+    "answer": "B",
+    "note": "抱石保護時雙手要舉起、手指併攏（拇指貼埋），準備扶住攀登者腰臀，引導佢雙腳落地，保護頭部同上身。"
+  },
+  {
+    "id": 17,
+    "text": "Q17. Climber 掛上第一個 quickdraw 之後，belayer 首先要做咩？",
+    "options": [
+      {
+        "key": "A",
+        "text": "放一大段鬆繩"
+      },
+      {
+        "key": "B",
+        "text": "即刻收繩至適當鬆緊"
+      },
+      {
+        "key": "C",
+        "text": "轉身理繩"
+      },
+      {
+        "key": "D",
+        "text": "停低唔做任何動作"
+      }
+    ],
+    "answer": "B",
+    "note": "入咗第一個扣之後，要即刻收走多餘鬆繩，因為離地近，鬆繩太多攀登者墜落時會撞地。"
+  },
+  {
+    "id": 18,
+    "text": "Q18. Climber 掛上第一個 quickdraw 之後，belayer 企位最重要考慮乜嘢？",
+    "options": [
+      {
+        "key": "A",
+        "text": "企得舒唔舒服"
+      },
+      {
+        "key": "B",
+        "text": "位置係咪恰當（唔影響攀登者，亦保障自身安全）"
+      },
+      {
+        "key": "C",
+        "text": "企遠啲方便睇清成條路線"
+      },
+      {
+        "key": "D",
+        "text": "即刻離開岩壁"
+      }
+    ],
+    "answer": "B",
+    "note": "Belayer 企位要恰當，唔可以離開牆身太遠，同時唔可以阻礙攀登者或企喺佢正下方。"
+  },
+  {
+    "id": 19,
+    "text": "Q19. 攀登者掛第一個 quickdraw 時，belayer 嗰邊條繩應避免點樣？",
+    "options": [
+      {
+        "key": "A",
+        "text": "預留少許鬆繩俾攀登者入繩"
+      },
+      {
+        "key": "B",
+        "text": "橫過攀登者身前或腳下，妨礙攀登"
+      },
+      {
+        "key": "C",
+        "text": "由 Gri Gri 順直通往第一個 quickdraw"
+      },
+      {
+        "key": "D",
+        "text": "繩堆擺喺 belayer 側邊"
+      }
+    ],
+    "answer": "B",
+    "note": "繩索唔可以阻礙攀登者，例如纏住或橫過佢腳下，否則會影響動作，墜落時亦可能勾腳。"
+  },
+  {
+    "id": 20,
+    "text": "Q20. Belayer 位置不當，攀登者墜落（Fall）時可能出現咩情況？",
+    "options": [
+      {
+        "key": "A",
+        "text": "主繩斷裂"
+      },
+      {
+        "key": "B",
+        "text": "繩勾住攀登者條腳或喺胯下坐繩（燒腳），甚至倒轉"
+      },
+      {
+        "key": "C",
+        "text": "主繩由 Gri Gri 滑出"
+      },
+      {
+        "key": "D",
+        "text": "下一個 quickdraw 自動鬆脫"
+      }
+    ],
+    "answer": "B",
+    "note": "如果繩喺攀登者大腿後面，墜落時會燒腳，甚至令攀登者倒轉、頭部撞牆。"
+  },
+  {
+    "id": 21,
+    "text": "Q21. 掛頭 4 個 quickdraw 時，俾繩有咩要求？",
+    "options": [
+      {
+        "key": "A",
+        "text": "俾越多越好，以免卡繩"
+      },
+      {
+        "key": "B",
+        "text": "唔可以俾太鬆，以免墜落撞地"
+      },
+      {
+        "key": "C",
+        "text": "每次俾一大段繩，以防扯住攀登者"
+      },
+      {
+        "key": "D",
+        "text": "隨意俾繩"
+      }
+    ],
+    "answer": "B",
+    "note": "頭幾個扣離地近，鬆繩太多墜落時會撞地；講義亦提醒動態防護要注意下墜距離，切忌引致攀登者墜地。"
+  },
+  {
+    "id": 22,
+    "text": "Q22. 掛頭 4 個 quickdraw 期間，belayer 同岩壁嘅距離有咩要求？",
+    "options": [
+      {
+        "key": "A",
+        "text": "唔可以靠近岩壁"
+      },
+      {
+        "key": "B",
+        "text": "盡可能貼近岩壁"
+      },
+      {
+        "key": "C",
+        "text": "離岩壁 1.5 米"
+      },
+      {
+        "key": "D",
+        "text": "離岩壁 5 米以上先安全"
+      }
+    ],
+    "answer": "B",
+    "note": "掛第四個扣之前，belayer 要盡量貼近岩壁，唔好企離第一口 bolt 太遠。"
+  },
+  {
+    "id": 23,
+    "text": "Q23. Belayer 如果企喺領攀者「正下方」，會有咩危險？",
+    "options": [
+      {
+        "key": "A",
+        "text": "條繩會打結"
+      },
+      {
+        "key": "B",
+        "text": "可能俾墜落嘅攀登者撞到"
+      },
+      {
+        "key": "C",
+        "text": "Gri Gri 會失效"
+      },
+      {
+        "key": "D",
+        "text": "攀登者會睇唔到路線"
+      }
+    ],
+    "answer": "B",
+    "note": "企喺攀登者正下方，佢墜落時可能直接撞落 belayer 身上，雙方都會受傷。belayer 應企喺第一個扣附近、稍為偏側嘅位置。"
+  },
+  {
+    "id": 24,
+    "text": "Q24. 課程對「俾繩同收繩」嘅熟練度有咩要求？",
+    "options": [
+      {
+        "key": "A",
+        "text": "速度要極快"
+      },
+      {
+        "key": "B",
+        "text": "順暢、唔卡繩"
+      },
+      {
+        "key": "C",
+        "text": "只可以單手操作"
+      },
+      {
+        "key": "D",
+        "text": "必須用歐式確保手法"
+      }
+    ],
+    "answer": "B",
+    "note": "俾繩同收繩要熟練流暢，唔好卡住攀登者，亦唔好俾過多鬆繩。"
+  },
+  {
+    "id": 25,
+    "text": "Q25. Climber 拉起條繩準備入繩，但入唔到，於是放返低條繩，belayer 應該點做？",
+    "options": [
+      {
+        "key": "A",
+        "text": "再俾多一倍繩"
+      },
+      {
+        "key": "B",
+        "text": "即刻收返多出嚟嘅繩"
+      },
+      {
+        "key": "C",
+        "text": "維持現狀"
+      },
+      {
+        "key": "D",
+        "text": "叫攀登者落返嚟"
+      }
+    ],
+    "answer": "B",
+    "note": "攀登者拉起條繩時 belayer 已經俾咗一大段繩，佢放手後要即刻收返，否則一跌就會跌得好遠，甚至撞地。"
+  },
+  {
+    "id": 26,
+    "text": "Q26. 如果 belay 動作顯得「太僵硬」，會被視為咩缺失？",
+    "options": [
+      {
+        "key": "A",
+        "text": "體力不足"
+      },
+      {
+        "key": "B",
+        "text": "流程不熟練"
+      },
+      {
+        "key": "C",
+        "text": "過度緊張"
+      },
+      {
+        "key": "D",
+        "text": "正常現象，唔扣分"
+      }
+    ],
+    "answer": "B",
+    "note": "動作僵硬代表收繩、俾繩未夠熟練，未能自然配合攀登者，要多練習。"
+  },
+  {
+    "id": 27,
+    "text": "Q27. 關於制動手（brake hand）同主繩，下列邊種行為屬於嚴重缺失？",
+    "options": [
+      {
+        "key": "A",
+        "text": "握得太實"
+      },
+      {
+        "key": "B",
+        "text": "制動手離開主繩"
+      },
+      {
+        "key": "C",
+        "text": "換手稍慢"
+      },
+      {
+        "key": "D",
+        "text": "戴手套 belay"
+      }
+    ],
+    "answer": "B",
+    "note": "制動手任何時候都絕對唔可以離開防護繩，離開即屬嚴重缺失。"
+  },
+  {
+    "id": 28,
+    "text": "Q28. 用 Gri Gri belay 時，制動手應該擺喺邊度？",
+    "options": [
+      {
+        "key": "A",
+        "text": "握住 Gri Gri 下方嘅制動繩，手唔離繩"
+      },
+      {
+        "key": "B",
+        "text": "握住通往攀登者嗰邊條繩"
+      },
+      {
+        "key": "C",
+        "text": "按住 Gri Gri 上面嘅凸輪"
+      },
+      {
+        "key": "D",
+        "text": "放開，等 Gri Gri 自動鎖繩"
+      }
+    ],
+    "answer": "A",
+    "note": "制動手要一直握住制動端條繩（Gri Gri 下方/側邊出嚟嗰段），唔可以放開，亦唔可以靠 Gri Gri 自動鎖繩代替制動手。"
+  },
+  {
+    "id": 29,
+    "text": "Q29. 如果 Climber 入錯繩、踩住 quickdraw 或者踩住 bolt，有機會出現危險，belayer 應該點做？",
+    "options": [
+      {
+        "key": "A",
+        "text": "保持沉默，以免攀登者分心"
+      },
+      {
+        "key": "B",
+        "text": "即時提醒並糾正"
+      },
+      {
+        "key": "C",
+        "text": "直接拉繩將攀登者降落"
+      },
+      {
+        "key": "D",
+        "text": "等攀登完先同教練講"
+      }
+    ],
+    "answer": "B",
+    "note": "Belayer 要同攀登者保持溝通，對每個攀爬動作作出適當應變，見到危險要即時提醒。"
+  },
+  {
+    "id": 30,
+    "text": "Q30. Climber 必須用邊種繩結連接安全帶？",
+    "options": [
+      {
+        "key": "A",
+        "text": "稱人結"
+      },
+      {
+        "key": "B",
+        "text": "雙八字結（雙八字圈結）"
+      },
+      {
+        "key": "C",
+        "text": "雙套結"
+      },
+      {
+        "key": "D",
+        "text": "單八字結"
+      }
+    ],
+    "answer": "B",
+    "note": "二級課程用雙八字結連接安全帶，完成後喺繩尾打半結鎖住。雙套結（clove hitch）用嚟固定，唔可以用嚟綁人。"
+  },
+  {
+    "id": 31,
+    "text": "Q31. 打繩結時，課程主要觀察乜嘢？",
+    "options": [
+      {
+        "key": "A",
+        "text": "只睇最後個結啱唔啱，過程唔重要"
+      },
+      {
+        "key": "B",
+        "text": "打結時間同熟練度"
+      },
+      {
+        "key": "C",
+        "text": "有冇用慣用手打結"
+      },
+      {
+        "key": "D",
+        "text": "有冇戴手套"
+      }
+    ],
+    "answer": "B",
+    "note": "打結要專心、熟練，一氣呵成，避免因分心打錯繩結而導致意外。"
+  },
+  {
+    "id": 32,
+    "text": "Q32. 打好嘅雙八字結，「外觀結構」有咩要求？",
+    "options": [
+      {
+        "key": "A",
+        "text": "要打得鬆啲，方便解開"
+      },
+      {
+        "key": "B",
+        "text": "結形唔可以混亂（要理順）"
+      },
+      {
+        "key": "C",
+        "text": "要多纏幾圈先夠實"
+      },
+      {
+        "key": "D",
+        "text": "冇特別要求"
+      }
+    ],
+    "answer": "B",
+    "note": "雙八字結要兩條繩平排理順、冇交叉，結形清楚先容易檢查，亦唔會鬆脫。"
+  },
+  {
+    "id": 33,
+    "text": "Q33. Climber 攀登前，除咗檢查自己，仲要檢查 belayer 乜嘢？",
+    "options": [
+      {
+        "key": "A",
+        "text": "防護裝備同 Gri Gri 有冇裝啱"
+      },
+      {
+        "key": "B",
+        "text": "Belayer 有冇帶粉袋"
+      },
+      {
+        "key": "C",
+        "text": "Belayer 岩鞋綁好未"
+      },
+      {
+        "key": "D",
+        "text": "Belayer 揀咗邊條路線"
+      }
+    ],
+    "answer": "A",
+    "note": "攀登前雙方必須互相檢查，確定防護器同鎖扣裝啱、上鎖先可以攀登。"
+  },
+  {
+    "id": 34,
+    "text": "Q34. 八字結打好之後，「繩圈大小」有咩要求？",
+    "options": [
+      {
+        "key": "A",
+        "text": "越大越好，方便抓握"
+      },
+      {
+        "key": "B",
+        "text": "繩圈唔可以太大"
+      },
+      {
+        "key": "C",
+        "text": "要拉到完全冇空隙、壓實安全帶"
+      },
+      {
+        "key": "D",
+        "text": "冇限制"
+      }
+    ],
+    "answer": "B",
+    "note": "繩圈太大會令攀登者離保護點遠咗，亦唔方便檢查；一般同 belay loop 差唔多大就啱。"
+  },
+  {
+    "id": 35,
+    "text": "Q35. 關於雙八字結嘅「繩尾」處理，下列邊項屬於缺失？",
+    "options": [
+      {
+        "key": "A",
+        "text": "繩尾太長或太短，又冇處理"
+      },
+      {
+        "key": "B",
+        "text": "繩尾約 10 厘米"
+      },
+      {
+        "key": "C",
+        "text": "繩尾打咗一個半結"
+      },
+      {
+        "key": "D",
+        "text": "繩圈大小同 belay loop 差唔多"
+      }
+    ],
+    "answer": "A",
+    "note": "八字結完成後必須喺繩尾打一個半結鎖住，而且繩尾要長過 8 厘米；繩尾太短或冇處理就屬缺失。"
+  },
+  {
+    "id": 36,
+    "text": "Q36. 攀登時要管理好器材，避免以下邊種影響安全嘅情況？",
+    "options": [
+      {
+        "key": "A",
+        "text": "動作太慢"
+      },
+      {
+        "key": "B",
+        "text": "跌落裝備或物件"
+      },
+      {
+        "key": "C",
+        "text": "quickdraw 互相碰撞有聲"
+      },
+      {
+        "key": "D",
+        "text": "quickdraw 分開掛喺安全帶兩邊"
+      }
+    ],
+    "answer": "B",
+    "note": "器材由高處跌落可能撞傷下面嘅人，器材本身亦可能受損；有嘢跌落要即刻叫「BELOW（下面當心）」。"
+  },
+  {
+    "id": 37,
+    "text": "Q37. 關於掛入 quickdraw，下列邊項正確？",
+    "options": [
+      {
+        "key": "A",
+        "text": "閘口方向同攀登方向相反"
+      },
+      {
+        "key": "B",
+        "text": "必須用左手掛"
+      },
+      {
+        "key": "C",
+        "text": "可以跳過唔掛"
+      },
+      {
+        "key": "D",
+        "text": "閘口要向住攀登方向"
+      }
+    ],
+    "answer": "A",
+    "note": "入繩時要注意快掛閘口方向，要同攀登方向相反，墜落時條繩先唔會由閘口跌出。"
+  },
+  {
+    "id": 38,
+    "text": "Q38. Climber 入繩時，由下面拉錯條繩令主繩交錯，呢種錯誤叫做？",
+    "options": [
+      {
+        "key": "A",
+        "text": "Y-clip"
+      },
+      {
+        "key": "B",
+        "text": "Z-clip"
+      },
+      {
+        "key": "C",
+        "text": "X-clip"
+      },
+      {
+        "key": "D",
+        "text": "C-clip"
+      }
+    ],
+    "answer": "B",
+    "note": "Z-clip 係入繩時拉咗上一個 quickdraw 下面嘅繩，令條繩成 Z 字形交錯，會造成好大摩擦，墜落時保護都會失效，要即刻解開重入。"
+  },
+  {
+    "id": 39,
+    "text": "Q39. Climber 已經爬高過最後一個 quickdraw 好多（run out）時，叫「拉實（TAKE）」可唔可以即刻掛喺繩上休息？",
+    "options": [
+      {
+        "key": "A",
+        "text": "可以"
+      },
+      {
+        "key": "B",
+        "text": "唔可以"
+      }
+    ],
+    "answer": "B",
+    "note": "人喺最後一個保護點上面，belayer 點拉都拉唔實，攀登者一放手都會先跌落保護點下面。應該先入扣或者爬返落去先叫拉實。HKCMCU 講義口號表叫呢個做 TENSION（拉緊）。"
+  },
+  {
+    "id": 40,
+    "text": "Q40. Climber 要留意乜嘢，避免繩索燒腳？",
+    "options": [
+      {
+        "key": "A",
+        "text": "條繩有冇喺腳後面"
+      },
+      {
+        "key": "B",
+        "text": "條繩嘅鬆緊"
+      },
+      {
+        "key": "C",
+        "text": "下一口 bolt 嘅位置"
+      },
+      {
+        "key": "D",
+        "text": "Quickdraw 閘口方向"
+      }
+    ],
+    "answer": "A",
+    "note": "領攀時條繩要盡量喺大腿外面，唔可以繞過大腿後面，否則墜落時會燒腳，甚至令人倒轉撞頭。"
+  }
+];
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function optionText(q, key) {
+  for (var i = 0; i < q.options.length; i++) {
+    if (q.options[i].key === key) return q.options[i].text;
+  }
+  return "";
+}
+
+function renderQuestions() {
+  var form = document.getElementById("quizForm");
+  var html = "";
+  for (var i = 0; i < QUESTIONS.length; i++) {
+    var q = QUESTIONS[i];
+    html += '<div class="q" id="q-' + q.id + '" data-qid="' + q.id + '">';
+    html += '<p class="q-title">' + esc(q.text) + "</p>";
+    html += '<div class="opts" role="radiogroup" aria-label="題目 ' + q.id + '">';
+    for (var j = 0; j < q.options.length; j++) {
+      var o = q.options[j];
+      var oid = "q" + q.id + "_" + o.key;
+      html += '<label class="opt" for="' + oid + '">';
+      html +=
+        '<input type="radio" name="q' +
+        q.id +
+        '" id="' +
+        oid +
+        '" value="' +
+        o.key +
+        '">';
+      html += "<span>(" + o.key + ") " + esc(o.text) + "</span>";
+      html += "</label>";
+    }
+    html += "</div>";
+    html += '<div class="feedback" id="fb-' + q.id + '"></div>';
+    html += "</div>";
+  }
+  form.innerHTML = html;
+  document.getElementById("qCount").textContent = String(QUESTIONS.length);
+  document.getElementById("passPct").textContent = String(Math.round(PASS_MARK * 100));
+}
+
+function getAnswer(qid) {
+  var els = document.getElementsByName("q" + qid);
+  for (var i = 0; i < els.length; i++) {
+    if (els[i].checked) return els[i].value;
+  }
+  return null;
+}
+
+function grade() {
+  var total = QUESTIONS.length;
+  var correct = 0;
+  var unanswered = 0;
+
+  for (var i = 0; i < QUESTIONS.length; i++) {
+    var q = QUESTIONS[i];
+    var card = document.getElementById("q-" + q.id);
+    var fb = document.getElementById("fb-" + q.id);
+    var picked = getAnswer(q.id);
+    card.classList.remove("correct", "wrong");
+
+    if (!picked) {
+      unanswered++;
+      card.classList.add("wrong");
+      fb.innerHTML =
+        "<strong>未作答。</strong> 正確答案：(" +
+        q.answer +
+        ") " +
+        esc(optionText(q, q.answer)) +
+        (q.note ? "<br>" + esc(q.note) : "");
+      continue;
+    }
+
+    if (picked === q.answer) {
+      correct++;
+      card.classList.add("correct");
+      fb.innerHTML =
+        "<strong>正確。</strong> 答案：(" +
+        q.answer +
+        ") " +
+        esc(optionText(q, q.answer)) +
+        (q.note ? "<br>" + esc(q.note) : "");
+    } else {
+      card.classList.add("wrong");
+      fb.innerHTML =
+        "<strong>唔啱。</strong> 你揀咗 (" +
+        picked +
+        ") " +
+        esc(optionText(q, picked)) +
+        "。<br>正確答案：(" +
+        q.answer +
+        ") " +
+        esc(optionText(q, q.answer)) +
+        (q.note ? "<br>" + esc(q.note) : "");
+    }
+  }
+
+  var pct = total ? correct / total : 0;
+  var pctShow = Math.round(pct * 1000) / 10;
+  var passed = pct >= PASS_MARK;
+  var name = (document.getElementById("studentName").value || "").trim();
+
+  var result = document.getElementById("result");
+  var html = "<h2>成績</h2>";
+  if (name) {
+    html += '<p class="score-line">考生：<strong>' + esc(name) + "</strong></p>";
+  }
+  html +=
+    '<p class="score-line">得分：<strong>' +
+    correct +
+    " / " +
+    total +
+    "</strong>（" +
+    pctShow +
+    "%）</p>";
+  html +=
+    '<span class="badge ' +
+    (passed ? "pass" : "fail") +
+    '">' +
+    (passed ? "合格" : "未合格") +
+    "</span>";
+  html +=
+    '<p class="pass-note" style="margin-top:10px">合格分數：' +
+    Math.round(PASS_MARK * 100) +
+    "%</p>";
+  if (unanswered > 0) {
+    html +=
+      '<p class="unanswered-warn">有 ' +
+      unanswered +
+      " 題未作答，已計作錯。</p>";
+  }
+  result.innerHTML = html;
+  result.classList.add("show");
+  result.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetQuiz() {
+  var form = document.getElementById("quizForm");
+  form.reset();
+  for (var i = 0; i < QUESTIONS.length; i++) {
+    var q = QUESTIONS[i];
+    var card = document.getElementById("q-" + q.id);
+    var fb = document.getElementById("fb-" + q.id);
+    card.classList.remove("correct", "wrong");
+    fb.innerHTML = "";
+  }
+  var result = document.getElementById("result");
+  result.classList.remove("show");
+  result.innerHTML = "";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.getElementById("submitBtn").addEventListener("click", grade);
+document.getElementById("resetBtn").addEventListener("click", resetQuiz);
+document.getElementById("quizForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  grade();
+});
+
+renderQuestions();
+
+// Expose for headless validation
+window.__QUIZ__ = {
+  QUESTIONS: QUESTIONS,
+  PASS_MARK: PASS_MARK,
+  grade: grade,
+  getAnswer: getAnswer,
+  optionText: optionText
+};
+</script>
+</body>
+</html>
